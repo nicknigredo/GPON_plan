@@ -1,16 +1,55 @@
 <!DOCTYPE html>
-<html lang="uk">
+<html lang="ru">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=0.25"/>
-  <title>GPON План</title>
-  <link rel="stylesheet" href="style.css" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Кабельная карта</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <style>
+        #map { height: 500px; }
+        .hidden { display: none; }
+        #nodeName { width: 100%; }
+        #nameInputContainer { margin: 10px 0; }
+        #cableTableContainer { margin-top: 20px; }
+        #modal { 
+            display: none; 
+            position: fixed; 
+            top: 50%; 
+            left: 50%; 
+            transform: translate(-50%, -50%); 
+            padding: 20px; 
+            background: #fff; 
+            border: 1px solid #ccc;
+            z-index: 999;
+        }
+    </style>
 </head>
 <body>
-  <h1>GPON План</h1>
-  <div id="mapContainer"></div>
 
-  <script src="GPON_base-config.js"></script>
-  <script src="main.js"></script>
+<div id="map"></div>
+
+<!-- Контейнер для ввода имени -->
+<div id="nameInputContainer" class="hidden">
+    <input type="text" id="nodeName" placeholder="Введите название" />
+    <button onclick="saveNodeName()">OK</button>
+</div>
+
+<!-- Таблица кабелей -->
+<div id="cableTableContainer"></div>
+
+<!-- Модальное окно для показа деталей объекта -->
+<div id="modal">
+    <div id="modalContent"></div>
+    <button onclick="closeModal()">Закрыть</button>
+</div>
+
+<!-- Кнопки для переключения режима -->
+<button onclick="setMode('box')">Добавить бокс</button>
+<button onclick="setMode('splice')">Добавить муфту</button>
+<button onclick="setMode('cable')">Добавить кабель</button>
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/uuid/8.3.2/uuid.min.js"></script>
+<script src="app.js"></script>
 </body>
 </html>
