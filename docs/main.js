@@ -125,6 +125,25 @@ function findNearestMarker(latlng) {
   return nearest;
 }
 
+const boxes = [];
+
+function addBoxAt(latlng) {
+  const params = {
+    id: prompt('Номер бокса?', 'BX-001'),
+    splitter: prompt('Номер спліттера?', 'SPL-1'),
+    address: prompt('Адреса?', 'вул. Центральна, 1'),
+    location: prompt('Місце установки?', 'підвал')
+  };
+  const box = new Box(map, latlng, params);
+  boxes.push(box);
+}
+
+map.on('click', function(e) {
+  if (mode === 'box') {
+    addBoxAt(e.latlng);
+  }
+});
+
 function updateCableTable() {
   const tbody = document.getElementById('cableTableBody');
   tbody.innerHTML = '';
