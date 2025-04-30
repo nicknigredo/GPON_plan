@@ -13,6 +13,13 @@ h1 {
   text-align: center;
 }
 
-#mapContainer {
-  padding: 1em;
-}
+<style>
+  .hidden {
+    display: none;
+  }
+  #mapContainer {
+    height: 500px;
+    margin-bottom: 20px;
+  }
+</style>
+
