@@ -2,202 +2,74 @@
 <html lang="uk">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>GPON План</title>
-
+  <title>GPON Схема</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  
   <!-- Leaflet -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
-  <!-- Leaflet GeometryUtil -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.geometryutil/0.9.3/leaflet.geometryutil.min.js"></script>
-
+  <!-- Стили -->
   <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      font-family: Arial, sans-serif;
+    }
+
     #map {
-      height: 500px;
-      margin-bottom: 20px;
+      height: calc(100% - 50px);
     }
+
     #controlPanel {
-      margin: 10px 0;
+      height: 50px;
+      padding: 8px 12px;
+      background: #f0f0f0;
+      border-bottom: 1px solid #ccc;
     }
+
     #controlPanel button {
-      margin-right: 10px;
       padding: 6px 12px;
       font-weight: bold;
+      margin-right: 10px;
       cursor: pointer;
-    }
-    .hidden {
-      display: none;
-    }
-    #nameInputContainer {
-      position: absolute;
-      background: #fff;
-      border: 1px solid #ccc;
-      padding: 10px;
-      z-index: 999;
-      box-shadow: 0 0 5px rgba(0,0,0,0.3);
     }
   </style>
 </head>
 <body>
-  <h1>GPON План</h1>
 
   <div id="controlPanel">
-    <button onclick="setMode('box')">Добавить бокс 🟥</button>
-    <button onclick="setMode('splice')">Добавить муфту 🔵</button>
-    <button onclick="setMode('cable')">Добавить кабель 📏</button>
-    <button onclick="finishCable()" id="finishCableBtn" class="hidden">Завершить трассу ✅</button>
+    <button id="addBoxBtn">Додати бокс 🟥</button>
   </div>
-
   <div id="map"></div>
 
-  <div id="nameInputContainer" class="hidden">
-    <input type="text" id="nodeName" placeholder="Назва вузла" />
-    <button onclick="saveNodeName()">ОК</button>
-  </div>
+  <script type="module">
+    import Box from './box.js';
 
-  <div>
-    <label for="cableType">Тип кабелю:</label>
-    <select id="cableType">
-      <option value="4">4 волокна</option>
-      <option value="8">8 волокон</option>
-      <option value="12">12 волокон</option>
-      <option value="24">24 волокна</option>
-      <option value="48">48 волокон</option>
-      <option value="96">96 волокон</option>
-      <option value="144">144 волокна</option>
-    </select>
-  </div>
-
-  <table border="1">
-    <thead>
-      <tr>
-        <th>#</th>
-        <th>Тип</th>
-        <th>От</th>
-        <th>До</th>
-        <th>Длина</th>
-      </tr>
-    </thead>
-    <tbody id="cableTableBody"></tbody>
-  </table>
-
-  <script>
-    let map = L.map('map').setView([48.3794, 31.1656], 6);
+    let map = L.map('map').setView([50.4501, 30.5234], 14);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
 
     let mode = null;
-    let cablePath = [];
-    let markers = [];
-    let cables = [];
-    let currentFeature = null;
 
-    function setMode(m) {
-      mode = m;
-      cablePath = [];
-      currentFeature = null;
-      document.getElementById('finishCableBtn').classList.toggle('hidden', m !== 'cable');
-    }
-
-    map.on('click', function(e) {
-      if (mode === 'box' || mode === 'splice') {
-        currentFeature = { type: mode, latlng: e.latlng };
-        showInputBox(e.latlng);
-      } else if (mode === 'cable') {
-        cablePath.push(e.latlng);
-        L.circleMarker(e.latlng, { radius: 4, color: 'red' }).addTo(map);
-      }
+    document.getElementById('addBoxBtn').addEventListener('click', () => {
+      mode = 'box';
     });
 
-    function showInputBox(latlng) {
-      const container = document.getElementById('nameInputContainer');
-      const point = map.latLngToContainerPoint(latlng);
-      container.style.top = `${point.y + 40}px`;
-      container.style.left = `${point.x + 40}px`;
-      container.classList.remove('hidden');
-      document.getElementById('nodeName').focus();
-    }
-
-    function saveNodeName() {
-      const name = document.getElementById('nodeName').value;
-      if (name && currentFeature) {
-        const iconHtml = currentFeature.type === 'box'
-          ? `<div style="color: blue; font-weight: bold;">🟥<br>${name}</div>`
-          : `<div style="color: green; font-weight: bold;">🔵<br>${name}</div>`;
-
-        const icon = L.divIcon({ html: iconHtml, iconSize: [50, 50], className: '' });
-
-        const marker = L.marker(currentFeature.latlng, { icon: icon }).addTo(map);
-        marker.bindPopup(`${name} (${currentFeature.type})`);
-        marker.name = name;
-
-        markers.push({ marker, name, type: currentFeature.type, latlng: currentFeature.latlng });
-        currentFeature = null;
+    map.on('click', function(e) {
+      if (mode === 'box') {
+        const params = {
+          id: prompt('Номер бокса?', 'BX-001'),
+          splitter: prompt('Номер спліттера?', 'SPL-1'),
+          address: prompt('Адреса установки?', 'вул. Центральна, 1'),
+          location: prompt('Місце установки?', 'підвал')
+        };
+        new Box(map, e.latlng, params);
+        mode = null;
       }
-
-      document.getElementById('nodeName').value = '';
-      document.getElementById('nameInputContainer').classList.add('hidden');
-    }
-
-    function finishCable() {
-      if (cablePath.length < 2) return alert('Потрібно щонайменше 2 точки.');
-
-      const cableType = document.getElementById('cableType').value;
-      const polyline = L.polyline(cablePath, {
-        color: 'red',
-        weight: 3,
-        dashArray: '5,5'
-      }).addTo(map);
-
-      const from = findNearestMarker(cablePath[0]);
-      const to = findNearestMarker(cablePath[cablePath.length - 1]);
-
-      const distance = L.GeometryUtil.length(cablePath) / 1000;
-
-      const info = {
-        type: cableType,
-        from: from ? from.name : '???',
-        to: to ? to.name : '???',
-        length: distance.toFixed(2) + ' км'
-      };
-
-      polyline.bindPopup(`Кабель: ${cableType} волокон<br>Длина: ${info.length}<br>От: ${info.from}<br>До: ${info.to}`);
-      cables.push({ polyline, info });
-
-      cablePath = [];
-      updateCableTable();
-    }
-
-    function findNearestMarker(latlng) {
-      let nearest = null;
-      let minDist = Infinity;
-      for (const m of markers) {
-        const d = map.distance(latlng, m.latlng);
-        if (d < 50 && d < minDist) {
-          minDist = d;
-          nearest = m;
-        }
-      }
-      return nearest;
-    }
-
-    function updateCableTable() {
-      const tbody = document.getElementById('cableTableBody');
-      tbody.innerHTML = '';
-      cables.forEach((c, i) => {
-        const row = document.createElement('tr');
-        row.innerHTML = `
-          <td>${i + 1}</td>
-          <td>${c.info.type}</td>
-          <td>${c.info.from}</td>
-          <td>${c.info.to}</td>
-          <td>${c.info.length}</td>
-        `;
-        tbody.appendChild(row);
-      });
-    }
+    });
   </script>
 </body>
 </html>
