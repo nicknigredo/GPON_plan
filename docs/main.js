@@ -46,7 +46,9 @@ function showInputBox() {
 function saveNodeName() {
   const name = document.getElementById('nodeName').value;
   if (name && currentFeature) {
-    const iconHtml = currentFeature.type === 'box'
+    const type = currentFeature.type; // передаем тип из currentFeature
+
+    const iconHtml = type === 'box'
       ? `<div style="color: blue; font-weight: bold;">🟥<br>${name}</div>`
       : `<div style="color: green; font-weight: bold;">🔵<br>${name}</div>`;
 
@@ -61,10 +63,10 @@ function saveNodeName() {
       draggable: false
     }).addTo(map);
 
-    marker.bindPopup(`${name} (${currentFeature.type})`);
+    marker.bindPopup(`${name} (${type})`);
     marker.name = name;
 
-    markers.push({ id: Date.now(), marker, name, type, latlng });
+    markers.push({ id: Date.now(), marker, name, type, latlng: currentFeature.latlng });
 
     currentFeature = null;
   }
@@ -82,24 +84,30 @@ function drawCable() {
     dashArray: '5,5'
   }).addTo(map);
 
+  // Расчет длины кабеля
+  let totalLength = 0;
+  for (let i = 1; i < cablePath.length; i++) {
+    totalLength += map.distance(cablePath[i - 1], cablePath[i]);
+  }
+
   const from = findNearestMarker(cablePath[0]);
-const to = findNearestMarker(cablePath[cablePath.length - 1]);
+  const to = findNearestMarker(cablePath[cablePath.length - 1]);
 
-const fiberCount = prompt('Кількість волокон у кабелі?', '8');
-const comment = prompt('Коментар до кабелю:', '');
+  const fiberCount = prompt('Кількість волокон у кабелі?', '8');
+  const comment = prompt('Коментар до кабелю:', '');
 
-const info = {
-  type: cableType,
-  fromId: from?.id,
-  from: from?.name ?? '...',
-  toId: to?.id,
-  to: to?.name ?? '...',
-  length: totalLength.toFixed(2),
-  fiberCount,
-  comment
-};
+  const info = {
+    type: cableType,
+    fromId: from?.id,
+    from: from?.name ?? '...',
+    toId: to?.id,
+    to: to?.name ?? '...',
+    length: totalLength.toFixed(2),
+    fiberCount,
+    comment
+  };
 
-cables.push({ path: polyline, info });
+  cables.push({ path: polyline, info });
   cablePath = [];
   updateCableTable();
 }
@@ -116,7 +124,6 @@ function findNearestMarker(latlng) {
   }
   return nearest;
 }
-
 
 function updateCableTable() {
   const tbody = document.getElementById('cableTableBody');
