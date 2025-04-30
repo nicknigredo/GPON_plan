@@ -64,7 +64,7 @@ function saveNodeName() {
     marker.bindPopup(`${name} (${currentFeature.type})`);
     marker.name = name;
 
-    markers.push({ marker, name, type: currentFeature.type, latlng: currentFeature.latlng });
+    markers.push({ id: Date.now(), marker, name, type, latlng });
 
     currentFeature = null;
   }
@@ -83,33 +83,40 @@ function drawCable() {
   }).addTo(map);
 
   const from = findNearestMarker(cablePath[0]);
-  const to = findNearestMarker(cablePath[cablePath.length - 1]);
+const to = findNearestMarker(cablePath[cablePath.length - 1]);
 
-  const distance = L.GeometryUtil.length(cablePath) / 1000; // в км
+const fiberCount = prompt('Кількість волокон у кабелі?', '8');
+const comment = prompt('Коментар до кабелю:', '');
 
-  const info = {
-    type: cableType,
-    from: from ? from.name : `(${cablePath[0].lat.toFixed(5)}, ${cablePath[0].lng.toFixed(5)})`,
-    to: to ? to.name : `(${cablePath[cablePath.length - 1].lat.toFixed(5)}, ${cablePath[cablePath.length - 1].lng.toFixed(5)})`,
-    length: distance.toFixed(2) + ' км'
-  };
+const info = {
+  type: cableType,
+  fromId: from?.id,
+  from: from?.name ?? '...',
+  toId: to?.id,
+  to: to?.name ?? '...',
+  length: totalLength.toFixed(2),
+  fiberCount,
+  comment
+};
 
-  polyline.bindPopup(`Кабель: ${cableType} волокон<br>Довжина: ${info.length}<br>Від: ${info.from}<br>До: ${info.to}`);
-
-  cables.push({ polyline, info });
+cables.push({ path: polyline, info });
   cablePath = [];
   updateCableTable();
 }
 
 function findNearestMarker(latlng) {
-  let minDist = Infinity;
   let nearest = null;
-  markers.forEach(m => {
-    const d = map.distance(latlng, m.latlng);
-    if (d < 20) nearest = m;
-  });
+  let minDistance = Infinity;
+  for (const m of markers) {
+    const dist = map.distance(latlng, m.latlng);
+    if (dist < minDistance && dist < 50) { // радиус поиска 50 м
+      minDistance = dist;
+      nearest = m;
+    }
+  }
   return nearest;
 }
+
 
 function updateCableTable() {
   const tbody = document.getElementById('cableTableBody');
