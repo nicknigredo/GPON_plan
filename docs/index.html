@@ -58,12 +58,12 @@
       const icon = L.divIcon({
         className: '',
         html: `
-          <svg width="25" height="25">
+          <svg width="50" height="50">
             <rect class="box-rect" x="5" y="5" width="40" height="40"></rect>
             <text x="25" y="30" text-anchor="middle" fill="white" font-size="12" font-weight="bold">${this.data.id}</text>
           </svg>
         `,
-        iconSize: [25, 25]
+        iconSize: [50, 50]
       });
 
       const marker = L.marker(this.latlng, { icon }).addTo(this.map);
