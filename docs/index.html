@@ -48,9 +48,9 @@
   <h1>GPON План</h1>
   
   <div id="controlPanel">
-  <button onclick="setMode('box')">Додати бокс 🟥</button>
-  <button onclick="setMode('splice')">Додати муфту 🔵</button>
-  <button onclick="setMode('cable')">Рисувати кабель 📏</button>
+  <button onclick="setMode('box')">Добавить бокс 🟥</button>
+  <button onclick="setMode('splice')">Добавить муфту 🔵</button>
+  <button onclick="setMode('cable')">Добавить кабель 📏</button>
 </div>
   
   <!-- Основная карта -->
@@ -181,7 +181,7 @@
         length: distance.toFixed(2) + ' км'
       };
 
-      polyline.bindPopup(`Кабель: ${cableType} волокон<br>Довжина: ${info.length}<br>Від: ${info.from}<br>До: ${info.to}`);
+      polyline.bindPopup(`Кабель: ${cableType} волокон<br>Длина: ${info.length}<br>От: ${info.from}<br>До: ${info.to}`);
 
       cables.push({ polyline, info });
       cablePath = [];
