@@ -45,10 +45,40 @@
 </div>
 <div id="map"></div>
 
-<!-- Основной скрипт -->
-<script type="module">
-  import Box from './box.js';
+<script>
+  class Box {
+    constructor(map, latlng, data) {
+      this.map = map;
+      this.latlng = latlng;
+      this.data = data;
+      this.createSVGElement();
+    }
 
+    createSVGElement() {
+      const icon = L.divIcon({
+        className: '',
+        html: `
+          <svg width="50" height="50">
+            <rect class="box-rect" x="5" y="5" width="40" height="40"></rect>
+            <text x="25" y="30" text-anchor="middle" fill="white" font-size="12" font-weight="bold">${this.data.id}</text>
+          </svg>
+        `,
+        iconSize: [50, 50]
+      });
+
+      const marker = L.marker(this.latlng, { icon }).addTo(this.map);
+      marker.bindPopup(`
+        <b>Бокс №${this.data.id}</b><br>
+        Спліттер: ${this.data.splitter}<br>
+        Адреса: ${this.data.address}<br>
+        Місце: ${this.data.location}
+      `);
+
+      this.marker = marker;
+    }
+  }
+
+  // Запуск карты
   const map = L.map('map').setView([48.3794, 31.1656], 6);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '&copy; OpenStreetMap contributors'
@@ -64,5 +94,6 @@
     });
   };
 </script>
+
 </body>
 </html>
