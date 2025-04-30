@@ -1,68 +1,61 @@
 <!DOCTYPE html>
 <html lang="uk">
 <head>
-
-  <style>
-  #mapContainer {
-    height: 500px;
-    margin-bottom: 20px;
-  }
-  #controlPanel {
-    margin: 10px 0;
-  }
-  #controlPanel button {
-    margin-right: 10px;
-    padding: 6px 12px;
-    font-weight: bold;
-    cursor: pointer;
-  }
-  .hidden {
-    display: none;
-  }
-  #nameInputContainer {
-    position: absolute;
-    top: 100px;
-    left: 50px;
-    background: #fff;
-    border: 1px solid #ccc;
-    padding: 10px;
-    z-index: 999;
-    box-shadow: 0 0 5px rgba(0,0,0,0.3);
-  }
-</style>
-
-  
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>GPON План</title>
-  <link rel="stylesheet" href="style.css" />
 
   <!-- Leaflet -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
-  <!-- Leaflet GeometryUtil (для расчёта расстояний) -->
+  <!-- Leaflet GeometryUtil -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.geometryutil/0.9.3/leaflet.geometryutil.min.js"></script>
+
+  <style>
+    #map {
+      height: 500px;
+      margin-bottom: 20px;
+    }
+    #controlPanel {
+      margin: 10px 0;
+    }
+    #controlPanel button {
+      margin-right: 10px;
+      padding: 6px 12px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .hidden {
+      display: none;
+    }
+    #nameInputContainer {
+      position: absolute;
+      background: #fff;
+      border: 1px solid #ccc;
+      padding: 10px;
+      z-index: 999;
+      box-shadow: 0 0 5px rgba(0,0,0,0.3);
+    }
+  </style>
 </head>
 <body>
   <h1>GPON План</h1>
-  
-  <div id="controlPanel">
-  <button onclick="setMode('box')">Добавить бокс 🟥</button>
-  <button onclick="setMode('splice')">Добавить муфту 🔵</button>
-  <button onclick="setMode('cable')">Добавить кабель 📏</button>
-</div>
-  
-  <!-- Основная карта -->
-  <div id="map" style="height: 500px;"></div>
 
-  <!-- Контейнер для ввода имени узла -->
+  <div id="controlPanel">
+    <button onclick="setMode('box')">Добавить бокс 🟥</button>
+    <button onclick="setMode('splice')">Добавить муфту 🔵</button>
+    <button onclick="setMode('cable')">Добавить кабель 📏</button>
+    <button onclick="finishCable()" id="finishCableBtn" class="hidden">Завершить трассу ✅</button>
+  </div>
+
+  <div id="map"></div>
+
   <div id="nameInputContainer" class="hidden">
     <input type="text" id="nodeName" placeholder="Назва вузла" />
     <button onclick="saveNodeName()">ОК</button>
   </div>
 
-  <!-- Выбор типа кабеля -->
   <div>
     <label for="cableType">Тип кабелю:</label>
     <select id="cableType">
@@ -76,7 +69,6 @@
     </select>
   </div>
 
-  <!-- Таблица для отображения кабелей -->
   <table border="1">
     <thead>
       <tr>
@@ -90,7 +82,6 @@
     <tbody id="cableTableBody"></tbody>
   </table>
 
-  <!-- Скрипт -->
   <script>
     let map = L.map('map').setView([48.3794, 31.1656], 6);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -99,7 +90,6 @@
 
     let mode = null;
     let cablePath = [];
-    let cableSegments = [];
     let markers = [];
     let cables = [];
     let currentFeature = null;
@@ -108,25 +98,25 @@
       mode = m;
       cablePath = [];
       currentFeature = null;
+      document.getElementById('finishCableBtn').classList.toggle('hidden', m !== 'cable');
     }
 
     map.on('click', function(e) {
       if (mode === 'box' || mode === 'splice') {
-        currentFeature = {
-          type: mode,
-          latlng: e.latlng
-        };
-        showInputBox();
+        currentFeature = { type: mode, latlng: e.latlng };
+        showInputBox(e.latlng);
       } else if (mode === 'cable') {
         cablePath.push(e.latlng);
-        if (cablePath.length >= 2) {
-          drawCable();
-        }
+        L.circleMarker(e.latlng, { radius: 4, color: 'red' }).addTo(map);
       }
     });
 
-    function showInputBox() {
-      document.getElementById('nameInputContainer').classList.remove('hidden');
+    function showInputBox(latlng) {
+      const container = document.getElementById('nameInputContainer');
+      const point = map.latLngToContainerPoint(latlng);
+      container.style.top = `${point.y + 40}px`;
+      container.style.left = `${point.x + 40}px`;
+      container.classList.remove('hidden');
       document.getElementById('nodeName').focus();
     }
 
@@ -137,22 +127,13 @@
           ? `<div style="color: blue; font-weight: bold;">🟥<br>${name}</div>`
           : `<div style="color: green; font-weight: bold;">🔵<br>${name}</div>`;
 
-        const icon = L.divIcon({
-          html: iconHtml,
-          iconSize: [50, 50],
-          className: ''
-        });
+        const icon = L.divIcon({ html: iconHtml, iconSize: [50, 50], className: '' });
 
-        const marker = L.marker(currentFeature.latlng, {
-          icon: icon,
-          draggable: false
-        }).addTo(map);
-
+        const marker = L.marker(currentFeature.latlng, { icon: icon }).addTo(map);
         marker.bindPopup(`${name} (${currentFeature.type})`);
         marker.name = name;
 
         markers.push({ marker, name, type: currentFeature.type, latlng: currentFeature.latlng });
-
         currentFeature = null;
       }
 
@@ -160,9 +141,10 @@
       document.getElementById('nameInputContainer').classList.add('hidden');
     }
 
-    function drawCable() {
-      const cableType = document.getElementById('cableType').value;
+    function finishCable() {
+      if (cablePath.length < 2) return alert('Потрібно щонайменше 2 точки.');
 
+      const cableType = document.getElementById('cableType').value;
       const polyline = L.polyline(cablePath, {
         color: 'red',
         weight: 3,
@@ -172,29 +154,32 @@
       const from = findNearestMarker(cablePath[0]);
       const to = findNearestMarker(cablePath[cablePath.length - 1]);
 
-      const distance = L.GeometryUtil.length(cablePath) / 1000; // в км
+      const distance = L.GeometryUtil.length(cablePath) / 1000;
 
       const info = {
         type: cableType,
-        from: from ? from.name : `(${cablePath[0].lat.toFixed(5)}, ${cablePath[0].lng.toFixed(5)})`,
-        to: to ? to.name : `(${cablePath[cablePath.length - 1].lat.toFixed(5)}, ${cablePath[cablePath.length - 1].lng.toFixed(5)})`,
+        from: from ? from.name : '???',
+        to: to ? to.name : '???',
         length: distance.toFixed(2) + ' км'
       };
 
       polyline.bindPopup(`Кабель: ${cableType} волокон<br>Длина: ${info.length}<br>От: ${info.from}<br>До: ${info.to}`);
-
       cables.push({ polyline, info });
+
       cablePath = [];
       updateCableTable();
     }
 
     function findNearestMarker(latlng) {
-      let minDist = Infinity;
       let nearest = null;
-      markers.forEach(m => {
+      let minDist = Infinity;
+      for (const m of markers) {
         const d = map.distance(latlng, m.latlng);
-        if (d < 20) nearest = m;
-      });
+        if (d < 50 && d < minDist) {
+          minDist = d;
+          nearest = m;
+        }
+      }
       return nearest;
     }
 
