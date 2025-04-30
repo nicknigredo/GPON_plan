@@ -11,9 +11,43 @@
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 </head>
 <body>
-  <h1>GPON Планувальник</h1>
+  <h1>GPON План</h1>
   <div id="mapContainer"></div>
 
+<!-- Контейнер для ввода имени узла -->
+<div id="nameInputContainer" class="hidden">
+  <input type="text" id="nodeName" placeholder="Назва вузла" />
+  <button onclick="saveNodeName()">Зберегти</button>
+</div>
+
+<!-- Выбор типа кабеля -->
+<div>
+  <label for="cableType">Тип кабелю:</label>
+  <select id="cableType">
+    <option value="4">4 волокна</option>
+    <option value="8">8 волокон</option>
+    <option value="12">12 волокон</option>
+    <option value="24">24 волокна</option>
+    <option value="48">48 волокон</option>
+    <option value="96">96 волокон</option>
+    <option value="144">144 волокна</option>
+  </select>
+</div>
+
+<!-- Таблица для отображения кабелей -->
+<table border="1">
+  <thead>
+    <tr>
+      <th>#</th>
+      <th>Тип</th>
+      <th>Від</th>
+      <th>До</th>
+      <th>Довжина</th>
+    </tr>
+  </thead>
+  <tbody id="cableTableBody"></tbody>
+</table>
+  
   <!-- JavaScript файли -->
   <script src="GPON_base-config.js"></script>
   <script src="main.js"></script>
