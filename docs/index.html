@@ -1,6 +1,37 @@
 <!DOCTYPE html>
 <html lang="uk">
 <head>
+
+  <style>
+  #mapContainer {
+    height: 500px;
+    margin-bottom: 20px;
+  }
+  #controlPanel {
+    margin: 10px 0;
+  }
+  #controlPanel button {
+    margin-right: 10px;
+    padding: 6px 12px;
+    font-weight: bold;
+    cursor: pointer;
+  }
+  .hidden {
+    display: none;
+  }
+  #nameInputContainer {
+    position: absolute;
+    top: 100px;
+    left: 50px;
+    background: #fff;
+    border: 1px solid #ccc;
+    padding: 10px;
+    z-index: 999;
+    box-shadow: 0 0 5px rgba(0,0,0,0.3);
+  }
+</style>
+
+  
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>GPON План</title>
@@ -15,7 +46,13 @@
 </head>
 <body>
   <h1>GPON План</h1>
-
+  
+  <div id="controlPanel">
+  <button onclick="setMode('box')">Додати бокс 🟥</button>
+  <button onclick="setMode('splice')">Додати муфту 🔵</button>
+  <button onclick="setMode('cable')">Рисувати кабель 📏</button>
+</div>
+  
   <!-- Основная карта -->
   <div id="map" style="height: 500px;"></div>
 
