@@ -32,7 +32,14 @@ map.on('click', function(e) {
 });
 
 function showInputBox() {
-  document.getElementById('nameInputContainer').classList.remove('hidden');
+  const container = document.getElementById('nameInputContainer');
+  container.classList.remove('hidden');
+
+  // Установим позицию окна рядом с местом клика
+  const mapPos = map.latLngToContainerPoint(currentFeature.latlng);
+  container.style.top = `${mapPos.y + 50}px`;
+  container.style.left = `${mapPos.x + 50}px`;
+
   document.getElementById('nodeName').focus();
 }
 
