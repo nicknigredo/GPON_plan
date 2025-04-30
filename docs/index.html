@@ -2,9 +2,9 @@
 <html lang="uk">
 <head>
   <meta charset="UTF-8" />
-  <title>GPON Схема</title>
+  <title>GPON План</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  
+
   <!-- Leaflet -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
@@ -13,63 +13,56 @@
   <style>
     html, body {
       margin: 0;
-      padding: 0;
       height: 100%;
-      font-family: Arial, sans-serif;
     }
-
     #map {
-      height: calc(100% - 50px);
+      height: 100%;
     }
-
-    #controlPanel {
-      height: 50px;
-      padding: 8px 12px;
-      background: #f0f0f0;
-      border-bottom: 1px solid #ccc;
+    #toolbar {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      z-index: 1000;
+      background: white;
+      padding: 10px;
+      border-radius: 4px;
+      box-shadow: 0 0 5px rgba(0,0,0,0.3);
     }
-
-    #controlPanel button {
-      padding: 6px 12px;
-      font-weight: bold;
-      margin-right: 10px;
-      cursor: pointer;
+    .box-rect {
+      stroke: black;
+      stroke-width: 2;
+      fill: blue;
+      fill-opacity: 0.6;
+      rx: 5;
+      ry: 5;
     }
   </style>
 </head>
 <body>
 
-  <div id="controlPanel">
-    <button id="addBoxBtn">Додати бокс 🟥</button>
-  </div>
-  <div id="map"></div>
+<div id="toolbar">
+  <button id="addBoxBtn">Додати бокс</button>
+</div>
+<div id="map"></div>
 
-  <script type="module">
-    import Box from './box.js';
+<!-- Основной скрипт -->
+<script type="module">
+  import Box from './box.js';
 
-    let map = L.map('map').setView([50.4501, 30.5234], 14);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; OpenStreetMap contributors'
-    }).addTo(map);
+  const map = L.map('map').setView([48.3794, 31.1656], 6);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap contributors'
+  }).addTo(map);
 
-    let mode = null;
-
-    document.getElementById('addBoxBtn').addEventListener('click', () => {
-      mode = 'box';
+  document.getElementById('addBoxBtn').onclick = () => {
+    map.once('click', (e) => {
+      const id = prompt('Номер бокса:');
+      const splitter = prompt('Номер спліттера:');
+      const address = prompt('Адреса:');
+      const location = prompt('Місце установки:');
+      new Box(map, e.latlng, { id, splitter, address, location });
     });
-
-    map.on('click', function(e) {
-      if (mode === 'box') {
-        const params = {
-          id: prompt('Номер бокса?', 'BX-001'),
-          splitter: prompt('Номер спліттера?', 'SPL-1'),
-          address: prompt('Адреса установки?', 'вул. Центральна, 1'),
-          location: prompt('Місце установки?', 'підвал')
-        };
-        new Box(map, e.latlng, params);
-        mode = null;
-      }
-    });
-  </script>
+  };
+</script>
 </body>
 </html>
