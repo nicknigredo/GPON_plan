@@ -1,29 +1,33 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="uk">
 <head>
   <meta charset="UTF-8" />
-  <title>SVG Бокс на карте</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link
-    rel="stylesheet"
-    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-    integrity="sha512-sA+ePsU6W5yDYN5H4x+nPqZMJbeVZ2wqMVB4G6BF4vRj8V6O88bbnD0bn4r+hME2Jt0tTi+zKRV6UuGydvFv2w=="
-    crossorigin=""
-  />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>GPON схема</title>
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+
   <style>
-    html, body, #map {
-      height: 100%;
+    html, body {
       margin: 0;
+      padding: 0;
+      height: 100%;
     }
-    .button-panel {
+    #map {
+      height: 100vh;
+      width: 100%;
+    }
+    #controlPanel {
       position: absolute;
       top: 10px;
       left: 100px;
       z-index: 1000;
       background: white;
-      padding: 5px;
-      border: 1px solid #999;
-      border-radius: 4px;
+      padding: 8px;
+      border: 1px solid #ccc;
+      box-shadow: 0 0 5px rgba(0,0,0,0.3);
     }
     .svg-param {
       font-size: 10px;
@@ -37,88 +41,91 @@
   </style>
 </head>
 <body>
-  <div class="button-panel">
-    <button id="addBoxBtn">Добавить бокс</button>
-  </div>
-  <div id="map"></div>
 
-  <script
-    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-    integrity="sha512-vP1qLzCpKsGoGz5lGA9gL+zQy4mBk5+n9j6jOr0pUTGCs+eMXYHx1YzM81+M18r0CXYbFUwPg4yGGM1YIM8bGg=="
-    crossorigin=""
-  ></script>
+<div id="controlPanel">
+  <button onclick="setMode('box')">➕ Додати бокс</button>
+</div>
 
-  <script>
-    const map = L.map('map').setView([50.45, 30.52], 13);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19
-    }).addTo(map);
+<div id="map"></div>
 
-    const svgLayer = L.svg().addTo(map);
-    const svg = d3.select(map.getPanes().overlayPane).select("svg");
+<script>
+  const map = L.map('map').setView([50.45, 30.52], 13);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '&copy; OpenStreetMap contributors'
+  }).addTo(map);
 
-    let boxIdCounter = 1;
+  const svgLayer = L.svg().addTo(map);
+  const svg = d3.select("#map").select("svg");
 
-    document.getElementById('addBoxBtn').addEventListener('click', () => {
-      const center = map.getCenter();
-      addSVGBox(center.lat, center.lng);
+  let mode = null;
+  let boxIdCounter = 1;
+
+  function setMode(m) {
+    mode = m;
+  }
+
+  map.on('click', function (e) {
+    if (mode === 'box') {
+      addSVGBox(e.latlng.lat, e.latlng.lng);
+      mode = null;
+    }
+  });
+
+  function addSVGBox(lat, lng) {
+    const boxId = "box" + boxIdCounter++;
+    const boxSize = 20; // уменьшенный размер
+    const offset = boxSize / 2;
+
+    const layerPoint = map.latLngToLayerPoint([lat, lng]);
+
+    const g = svg.append("g")
+      .attr("class", "svg-box-group")
+      .attr("transform", `translate(${layerPoint.x - offset}, ${layerPoint.y - offset})`)
+      .call(d3.drag()
+        .on("drag", function (event) {
+          const dx = event.dx;
+          const dy = event.dy;
+          const current = d3.select(this);
+          const [x, y] = current.attr("transform").match(/[-\d.]+/g).map(Number);
+          current.attr("transform", `translate(${x + dx}, ${y + dy})`);
+        })
+      );
+
+    g.append("rect")
+      .attr("width", boxSize)
+      .attr("height", boxSize)
+      .attr("fill", "blue")
+      .attr("stroke", "black")
+      .attr("stroke-width", 1)
+      .attr("class", "svg-box");
+
+    const params = [
+      { key: "№" + boxIdCounter, dy: -10 },
+      { key: "Спл.1", dy: 0 },
+      { key: "Адреса", dy: 10 },
+      { key: "Місце", dy: 20 }
+    ];
+
+    params.forEach((p, i) => {
+      g.append("text")
+        .attr("x", boxSize + 5)
+        .attr("y", boxSize / 2 + p.dy)
+        .attr("class", "svg-param")
+        .attr("contentEditable", true)
+        .text(p.key);
     });
 
-    function addSVGBox(lat, lng) {
-      const boxId = "box" + boxIdCounter++;
-      const boxSize = 20; // уменьшенный размер
-      const offset = boxSize / 2;
+    g.node().latlng = [lat, lng]; // сохранить координаты
 
-      const layerPoint = map.latLngToLayerPoint([lat, lng]);
-
-      const g = svg.append("g")
-        .attr("class", "svg-box-group")
-        .attr("transform", `translate(${layerPoint.x - offset}, ${layerPoint.y - offset})`)
-        .call(d3.drag()
-          .on("drag", function (event) {
-            const dx = event.dx;
-            const dy = event.dy;
-            const current = d3.select(this);
-            const [x, y] = current.attr("transform").match(/[-\d.]+/g).map(Number);
-            current.attr("transform", `translate(${x + dx}, ${y + dy})`);
-          })
-        );
-
-      g.append("rect")
-        .attr("width", boxSize)
-        .attr("height", boxSize)
-        .attr("fill", "blue")
-        .attr("stroke", "black")
-        .attr("stroke-width", 1)
-        .attr("class", "svg-box");
-
-      const params = [
-        { key: "№" + boxIdCounter, dy: -10 },
-        { key: "Спл.1", dy: 0 },
-        { key: "Адрес", dy: 10 },
-        { key: "Место", dy: 20 }
-      ];
-
-      params.forEach((p, i) => {
-        g.append("text")
-          .attr("x", boxSize + 5)
-          .attr("y", boxSize / 2 + p.dy)
-          .attr("class", "svg-param")
-          .attr("contentEditable", true)
-          .text(p.key);
-      });
-
-      g.node().latlng = [lat, lng]; // сохранить координаты
-
-      function updatePosition() {
-        const point = map.latLngToLayerPoint(g.node().latlng);
-        g.attr("transform", `translate(${point.x - offset}, ${point.y - offset})`);
-      }
-
-      map.on("zoom move", updatePosition);
+    function updatePosition() {
+      const point = map.latLngToLayerPoint(g.node().latlng);
+      g.attr("transform", `translate(${point.x - offset}, ${point.y - offset})`);
     }
-  </script>
 
-  <script src="https://d3js.org/d3.v7.min.js"></script>
+    map.on("zoom move", updatePosition);
+  }
+</script>
+
 </body>
 </html>
