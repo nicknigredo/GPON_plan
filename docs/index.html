@@ -72,82 +72,89 @@
     }
   });
 
-  function addSVGBox(lat, lng) {
-    const boxId = "box" + boxIdCounter++;
-    const boxSize = 20;
-    const offset = boxSize / 2;
+function addSVGBox(lat, lng) {
+  const boxId = "box" + boxIdCounter++;
+  const boxSize = 20;
+  const offset = boxSize / 2;
 
-    const g = svg.append("g")
-      .attr("class", "svg-box-group")
-      .call(d3.drag()
-        .on("start", function (event) {
-          d3.select(this).raise();
-        })
-        .on("drag", function (event) {
-          const [x, y] = d3.select(this).attr("transform").match(/[-\d.]+/g).map(Number);
-          const newX = x + event.dx;
-          const newY = y + event.dy;
-          d3.select(this).attr("transform", `translate(${newX}, ${newY})`);
-          const point = L.point(newX + offset, newY + offset);
-          const latlng = map.layerPointToLatLng(point);
-          updateCoordText(g, latlng);
-        })
-      );
+  const point = map.latLngToLayerPoint([lat, lng]);
 
-    const point = map.latLngToLayerPoint([lat, lng]);
-    g.attr("transform", `translate(${point.x - offset}, ${point.y - offset})`);
+  const g = svg.append("g")
+    .attr("class", "svg-box-group")
+    .attr("transform", `translate(${point.x - offset}, ${point.y - offset})`)
+    .each(function () {
+      this._latlng = L.latLng(lat, lng);  // сохраняем координаты в элемент
+    })
+    .call(d3.drag()
+      .on("start", function (event) {
+        d3.select(this).raise();
+      })
+      .on("drag", function (event) {
+        const transform = d3.select(this).attr("transform");
+        const [x, y] = transform.match(/[-\d.]+/g).map(Number);
+        const newX = x + event.dx;
+        const newY = y + event.dy;
+        d3.select(this).attr("transform", `translate(${newX}, ${newY})`);
 
-    // Прямоугольник бокса
-    g.append("rect")
-      .attr("width", boxSize)
-      .attr("height", boxSize)
-      .attr("fill", "blue")
-      .attr("stroke", "black")
-      .attr("stroke-width", 1)
-      .attr("class", "svg-box");
+        const latlng = map.layerPointToLatLng([newX + offset, newY + offset]);
+        this._latlng = latlng;
+        updateCoordText(d3.select(this), latlng);
+      })
+    );
 
-    // Параметры бокса
-    const params = [
-      { key: "Спліттер 1", dy: -12 },
-      { key: "Адреса", dy: 0 },
-      { key: "Місце", dy: 12 }
-    ];
+  // Прямоугольник
+  g.append("rect")
+    .attr("width", boxSize)
+    .attr("height", boxSize)
+    .attr("fill", "blue")
+    .attr("stroke", "black")
+    .attr("stroke-width", 1)
+    .attr("class", "svg-box");
 
-    params.forEach((p, i) => {
-      g.append("text")
-        .attr("x", boxSize + 5)
-        .attr("y", boxSize / 2 + p.dy)
-        .attr("class", "svg-param")
-        .attr("contentEditable", "true")
-        .text(p.key);
-    });
+  // Параметры (редактируемый текст)
+  const params = [
+    { key: "Спліттер 1", dy: -12 },
+    { key: "Адреса", dy: 0 },
+    { key: "Місце", dy: 12 }
+  ];
 
-    // Координаты
-    const coordText = g.append("text")
+  params.forEach((p) => {
+    const foreign = g.append("foreignObject")
       .attr("x", boxSize + 5)
-      .attr("y", boxSize / 2 + 24)
-      .attr("class", "svg-param");
+      .attr("y", boxSize / 2 + p.dy - 8)
+      .attr("width", 100)
+      .attr("height", 20);
 
-    updateCoordText(g, [lat, lng]);
+    foreign.append("xhtml:div")
+      .style("font-size", "10px")
+      .style("color", "black")
+      .attr("contenteditable", "true")
+      .text(p.key);
+  });
 
-    // Функция обновления позиции и координат при зуме/движении карты
-    function updatePosition() {
-      const point = map.latLngToLayerPoint(g.node().latlng);
-      g.attr("transform", `translate(${point.x - offset}, ${point.y - offset})`);
-      updateCoordText(g, g.node().latlng);
-    }
+  // Координаты
+  const coordText = g.append("text")
+    .attr("x", boxSize + 5)
+    .attr("y", boxSize / 2 + 28)
+    .attr("class", "svg-param");
 
-    g.node().latlng = [lat, lng];
+  updateCoordText(g, [lat, lng]);
 
-    function updateCoordText(g, latlng) {
-      g.node().latlng = latlng;
-      const latStr = latlng[0].toFixed(5);
-      const lngStr = latlng[1].toFixed(5);
-      coordText.text(`${latStr}, ${lngStr}`);
-    }
-
-    map.on("zoom move", updatePosition);
+  function updateCoordText(g, latlng) {
+    const latStr = latlng.lat.toFixed(5);
+    const lngStr = latlng.lng.toFixed(5);
+    coordText.text(`${latStr}, ${lngStr}`);
   }
+
+  function updatePosition() {
+    const point = map.latLngToLayerPoint(g.node()._latlng);
+    g.attr("transform", `translate(${point.x - offset}, ${point.y - offset})`);
+  }
+
+  map.on("zoom", updatePosition);
+  map.on("move", updatePosition);
+}
+
 </script>
 
 </body>
