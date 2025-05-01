@@ -2,97 +2,127 @@
 <html lang="uk">
 <head>
   <meta charset="UTF-8" />
-  <title>GPON План</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>GPON схема</title>
 
-  <!-- Leaflet -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
-  <!-- Стили -->
   <style>
     html, body {
       margin: 0;
+      padding: 0;
       height: 100%;
     }
     #map {
-      height: 100%;
+      height: 100vh;
+      width: 100%;
     }
-    #toolbar {
+    #controlPanel {
       position: absolute;
       top: 10px;
       left: 100px;
       z-index: 1000;
       background: white;
-      padding: 10px;
-      border-radius: 4px;
+      padding: 8px;
+      border: 1px solid #ccc;
       box-shadow: 0 0 5px rgba(0,0,0,0.3);
     }
-    .box-rect {
-      stroke: black;
-      stroke-width: 2;
-      fill: blue;
-      fill-opacity: 0.6;
-      rx: 5;
-      ry: 5;
+    .box-container {
+      display: flex;
+      flex-direction: row;
+      align-items: flex-start;
+    }
+    .gpon-box {
+      width: 20px;
+      height: 20px;
+      background-color: blue;
+      border: 2px solid black;
+    }
+    .box-labels {
+      margin-left: 6px;
+      font-size: 10px;
+      font-family: sans-serif;
+      line-height: 1.2;
+      user-select: none;
+    }
+    .box-labels input {
+      font-size: 10px;
+      width: 90px;
+      border: none;
+      border-bottom: 1px solid #ccc;
+      margin-bottom: 2px;
     }
   </style>
 </head>
 <body>
 
-<div id="toolbar">
-  <button id="addBoxBtn">Додати бокс</button>
+<div id="controlPanel">
+  <button onclick="setMode('box')">➕ Додати бокс</button>
 </div>
+
 <div id="map"></div>
 
 <script>
-  class Box {
-    constructor(map, latlng, data) {
-      this.map = map;
-      this.latlng = latlng;
-      this.data = data;
-      this.createSVGElement();
-    }
-
-    createSVGElement() {
-      const icon = L.divIcon({
-        className: '',
-        html: `
-          <svg width="50" height="50">
-            <rect class="box-rect" x="5" y="5" width="40" height="40"></rect>
-            <text x="25" y="30" text-anchor="middle" fill="white" font-size="12" font-weight="bold">${this.data.id}</text>
-          </svg>
-        `,
-        iconSize: [50, 50]
-      });
-
-      const marker = L.marker(this.latlng, { icon }).addTo(this.map);
-      marker.bindPopup(`
-        <b>Бокс №${this.data.id}</b><br>
-        Спліттер: ${this.data.splitter}<br>
-        Адреса: ${this.data.address}<br>
-        Місце: ${this.data.location}
-      `);
-
-      this.marker = marker;
-    }
-  }
-
-  // Запуск карты
-  const map = L.map('map').setView([48.3794, 31.1656], 6);
+  const map = L.map('map').setView([48.38, 31.17], 7);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '&copy; OpenStreetMap contributors'
   }).addTo(map);
 
-  document.getElementById('addBoxBtn').onclick = () => {
-    map.once('click', (e) => {
-      const id = prompt('Номер бокса:');
-      const splitter = prompt('Номер спліттера:');
-      const address = prompt('Адреса:');
-      const location = prompt('Місце установки:');
-      new Box(map, e.latlng, { id, splitter, address, location });
+  let mode = null;
+
+  function setMode(m) {
+    mode = m;
+  }
+
+  map.on('click', function (e) {
+    if (mode === 'box') {
+      addBox(e.latlng);
+      mode = null;
+    }
+  });
+
+  function addBox(latlng) {
+    const iconHtml = `
+      <div class="box-container">
+        <div class="gpon-box"></div>
+        <div class="box-labels">
+          <input type="text" placeholder="№ бокса" />
+          <input type="text" placeholder="№ спліттера" />
+          <input type="text" placeholder="Адреса" />
+          <input type="text" placeholder="Місце" />
+          <div class="coords" style="color:gray; font-size:9px;"></div>
+        </div>
+      </div>
+    `;
+
+    const icon = L.divIcon({
+      html: iconHtml,
+      className: '',
+      iconSize: [100, 30],
+      iconAnchor: [10, 10]
     });
-  };
+
+    const marker = L.marker(latlng, {
+      icon: icon,
+      draggable: true
+    }).addTo(map);
+
+    updateCoords(marker, latlng);
+
+    marker.on('drag', function (e) {
+      updateCoords(marker, e.latlng);
+    });
+  }
+
+  function updateCoords(marker, latlng) {
+    const container = marker.getElement();
+    if (!container) return;
+    const coordsDiv = container.querySelector('.coords');
+    if (coordsDiv) {
+      coordsDiv.textContent = `${latlng.lat.toFixed(5)}, ${latlng.lng.toFixed(5)}`;
+    }
+  }
 </script>
 
 </body>
