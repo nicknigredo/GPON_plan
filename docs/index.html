@@ -3,158 +3,138 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>GPON схема</title>
+  <title>GPON Бокс</title>
+  <style>
+    #map { height: 100vh; }
+
+    #sidebar {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: #fff;
+      border: 1px solid #ccc;
+      padding: 8px;
+      z-index: 1000;
+      font-family: sans-serif;
+    }
+
+    #sidebar input {
+      display: block;
+      margin-bottom: 5px;
+      width: 150px;
+    }
+  </style>
 
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-  <script src="https://d3js.org/d3.v7.min.js"></script>
-
-  <style>
-    html, body {
-      margin: 0;
-      padding: 0;
-      height: 100%;
-    }
-    #map {
-      height: 100vh;
-      width: 100%;
-    }
-    #controlPanel {
-      position: absolute;
-      top: 10px;
-      left: 10px;
-      z-index: 1000;
-      background: white;
-      padding: 8px;
-      border: 1px solid #ccc;
-      box-shadow: 0 0 5px rgba(0,0,0,0.3);
-    }
-    .svg-param {
-      font-size: 10px;
-      fill: black;
-      cursor: text;
-      user-select: all;
-    }
-    .svg-box {
-      cursor: move;
-    }
-  </style>
 </head>
 <body>
 
-<div id="controlPanel">
-  <button onclick="setMode('box')">➕ Додати бокс</button>
+<div id="sidebar">
+  <button id="addBoxBtn">Додати бокс</button>
+  <hr>
+  <input type="text" id="boxId" placeholder="Номер боксу">
+  <input type="text" id="splitterId" placeholder="Номер спліттера">
+  <input type="text" id="address" placeholder="Адреса">
+  <input type="text" id="place" placeholder="Місце">
+  <input type="text" id="coords" readonly placeholder="Координати">
 </div>
 
 <div id="map"></div>
 
 <script>
-  const map = L.map('map').setView([50.45, 30.52], 13);
+  const map = L.map('map').setView([48.3794, 31.1656], 6);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 19,
     attribution: '&copy; OpenStreetMap contributors'
   }).addTo(map);
 
-  const svgLayer = L.svg().addTo(map);
-  const svg = d3.select("#map").select("svg");
+  const svgLayer = L.svg({ clickable: true }).addTo(map);
+  const svg = d3.select(map.getPanes().overlayPane).select('svg');
+  let selectedBox = null;
 
-  let mode = null;
-  let boxIdCounter = 1;
+  document.getElementById('addBoxBtn').onclick = () => {
+    map.once('click', e => {
+      const coords = map.latLngToLayerPoint(e.latlng);
+      const group = svg.append('g')
+        .attr('transform', `translate(${coords.x}, ${coords.y})`)
+        .call(drag());
 
-  function setMode(m) {
-    mode = m;
-  }
+      const rect = group.append('rect')
+        .attr('x', -10)
+        .attr('y', -10)
+        .attr('width', 20)
+        .attr('height', 20)
+        .attr('stroke', 'black')
+        .attr('fill', 'blue')
+        .attr('stroke-width', 1);
 
-  map.on('click', function (e) {
-    if (mode === 'box') {
-      addSVGBox(e.latlng.lat, e.latlng.lng);
-      mode = null;
-    }
+      group.datum({
+        latlng: e.latlng,
+        boxId: '',
+        splitterId: '',
+        address: '',
+        place: ''
+      });
+
+      group.on('click', function() {
+        selectedBox = d3.select(this);
+        const data = selectedBox.datum();
+        document.getElementById('boxId').value = data.boxId;
+        document.getElementById('splitterId').value = data.splitterId;
+        document.getElementById('address').value = data.address;
+        document.getElementById('place').value = data.place;
+        document.getElementById('coords').value = `${data.latlng.lat.toFixed(5)}, ${data.latlng.lng.toFixed(5)}`;
+      });
+
+      selectedBox = group;
+    });
+  };
+
+  ['boxId', 'splitterId', 'address', 'place'].forEach(id => {
+    document.getElementById(id).addEventListener('input', () => {
+      if (selectedBox) {
+        const data = selectedBox.datum();
+        data[id] = document.getElementById(id).value;
+      }
+    });
   });
 
-function addSVGBox(lat, lng) {
-  const boxId = "box" + boxIdCounter++;
-  const boxSize = 20;
-  const offset = boxSize / 2;
+  function drag() {
+    return d3.drag().on('drag', function(event, d) {
+      const dx = event.dx;
+      const dy = event.dy;
 
-  const point = map.latLngToLayerPoint([lat, lng]);
+      const g = d3.select(this);
+      const transform = g.attr('transform');
+      const match = /translate\(([^,]+),\s?([^)]+)\)/.exec(transform);
+      const x = parseFloat(match[1]) + dx;
+      const y = parseFloat(match[2]) + dy;
 
-  const g = svg.append("g")
-    .attr("class", "svg-box-group")
-    .attr("transform", `translate(${point.x - offset}, ${point.y - offset})`)
-    .each(function () {
-      this._latlng = L.latLng(lat, lng);  // сохраняем координаты в элемент
-    })
-    .call(d3.drag()
-      .on("start", function (event) {
-        d3.select(this).raise();
-      })
-      .on("drag", function (event) {
-        const transform = d3.select(this).attr("transform");
-        const [x, y] = transform.match(/[-\d.]+/g).map(Number);
-        const newX = x + event.dx;
-        const newY = y + event.dy;
-        d3.select(this).attr("transform", `translate(${newX}, ${newY})`);
+      g.attr('transform', `translate(${x}, ${y})`);
 
-        const latlng = map.layerPointToLatLng([newX + offset, newY + offset]);
-        this._latlng = latlng;
-        updateCoordText(d3.select(this), latlng);
-      })
-    );
+      const point = L.point(x, y);
+      const latlng = map.layerPointToLatLng(point);
+      d.latlng = latlng;
 
-  // Прямоугольник
-  g.append("rect")
-    .attr("width", boxSize)
-    .attr("height", boxSize)
-    .attr("fill", "blue")
-    .attr("stroke", "black")
-    .attr("stroke-width", 1)
-    .attr("class", "svg-box");
+      if (selectedBox && g.node() === selectedBox.node()) {
+        document.getElementById('coords').value = `${latlng.lat.toFixed(5)}, ${latlng.lng.toFixed(5)}`;
+      }
+    });
+  }
 
-  // Параметры (редактируемый текст)
-  const params = [
-    { key: "Спліттер 1", dy: -12 },
-    { key: "Адреса", dy: 0 },
-    { key: "Місце", dy: 12 }
-  ];
-
-  params.forEach((p) => {
-    const foreign = g.append("foreignObject")
-      .attr("x", boxSize + 5)
-      .attr("y", boxSize / 2 + p.dy - 8)
-      .attr("width", 100)
-      .attr("height", 20);
-
-    foreign.append("xhtml:div")
-      .style("font-size", "10px")
-      .style("color", "black")
-      .attr("contenteditable", "true")
-      .text(p.key);
+  map.on('zoom', () => {
+    svg.selectAll('g').each(function(d) {
+      const point = map.latLngToLayerPoint(d.latlng);
+      d3.select(this).attr('transform', `translate(${point.x}, ${point.y})`);
+    });
   });
 
-  // Координаты
-  const coordText = g.append("text")
-    .attr("x", boxSize + 5)
-    .attr("y", boxSize / 2 + 28)
-    .attr("class", "svg-param");
-
-  updateCoordText(g, [lat, lng]);
-
-  function updateCoordText(g, latlng) {
-    const latStr = latlng.lat.toFixed(5);
-    const lngStr = latlng.lng.toFixed(5);
-    coordText.text(`${latStr}, ${lngStr}`);
+  // D3.js подключим динамически, если ещё нет
+  if (typeof d3 === 'undefined') {
+    const script = document.createElement('script');
+    script.src = 'https://d3js.org/d3.v7.min.js';
+    document.head.appendChild(script);
   }
-
-  function updatePosition() {
-    const point = map.latLngToLayerPoint(g.node()._latlng);
-    g.attr("transform", `translate(${point.x - offset}, ${point.y - offset})`);
-  }
-
-  map.on("zoom", updatePosition);
-  map.on("move", updatePosition);
-}
-
 </script>
 
 </body>
